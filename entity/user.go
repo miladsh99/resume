@@ -12,11 +12,11 @@ type User struct {
 }
 
 // GetPassword getter
-func (u User) GetPassword() string {
+func (u *User) GetPassword() string {
 	return u.password
 }
 
 // SetPassword setter
-func (u User) SetPassword(p string) {
+func (u *User) SetPassword(p string) {
 	u.password = p
 }

@@ -11,17 +11,18 @@ import (
 	"resume/repository"
 )
 
-func RegisterUser(db *sql.DB) {
+func RegisterUser(db *sql.DB, user entity.User) (entity.User, error) {
 
-	newUser := GetRegisterInfo()
-
-	_, rErr := db.Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-		newUser.Name, newUser.Email, newUser.GetPassword())
+	res, rErr := db.Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+		user.Name, user.Email, user.GetPassword())
 	if rErr != nil {
-		fmt.Println(rErr)
+		return entity.User{}, rErr
 	}
-	fmt.Println("Register successfully")
+	// insert into db ->
+	id, _ := res.LastInsertId()
+	user.ID = uint(id)
 
+	return user, nil
 }
 
 func GetRegisterInfo() entity.User {

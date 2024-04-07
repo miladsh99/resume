@@ -6,7 +6,7 @@ import (
 )
 
 func ConnectDatabase() *sql.DB {
-	db, cErr := sql.Open("mysql", "root:dalim123@tcp(127.0.0.1:3306)/resume-job")
+	db, cErr := sql.Open("mysql", "root:dalim123@tcp(127.0.0.1:3306)/resume-job?parseTime=true")
 	if cErr != nil {
 		fmt.Println(cErr)
 	}

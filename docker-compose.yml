@@ -1,0 +1,19 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    container_name: resume-job
+    volumes:
+      - dbdata:/var/lib/mysql
+    restart: always
+    command: [ 'mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
+    environment:
+      MYSQL_ROOT_PASSWORD: dalim123
+      MYSQL_DATABASE: resume-job
+      MYSQL_PASSWORD: dalim123
+
+volumes:
+  dbdata:
