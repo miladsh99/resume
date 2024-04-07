@@ -10,7 +10,6 @@ import (
 )
 
 func main() {
-
 	db := repository.ConnectDatabase()
 	defer db.Close()
 

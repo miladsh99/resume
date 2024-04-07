@@ -5,27 +5,18 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/howeyc/gopass"
+	"log"
 	"os"
 	"resume/entity"
 	"resume/repository"
-	"time"
 )
 
 func RegisterUser(db *sql.DB) {
 
-	currentTime := time.Now()
-	newuser := GetRegisterInfo()
+	newUser := GetRegisterInfo()
 
-	newUser := entity.User{
-		Name:       newuser.Name,
-		Email:      newuser.Email,
-		Password:   newuser.Password,
-		Created_at: currentTime,
-		Updated_at: currentTime,
-	}
-
-	_, rErr := db.Exec("INSERT INTO users (ID, Name, Email, Password, Created_at, Updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-		newUser.ID, newUser.Name, newUser.Email, newUser.Password, newUser.Created_at, newUser.Updated_at)
+	_, rErr := db.Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+		newUser.Name, newUser.Email, newUser.GetPassword())
 	if rErr != nil {
 		fmt.Println(rErr)
 	}
@@ -47,11 +38,14 @@ func GetRegisterInfo() entity.User {
 		fmt.Print("Enter email: ")
 		email, _ := reader.ReadString('\n')
 		email = ModifyValue(email)
-		statusCode := CheckEmail(email, repository.ConnectDatabase())
-		if statusCode == 1 {
+		exist, err := CheckEmail(email, repository.ConnectDatabase())
+		if err != nil {
+			log.Fatalln(err)
+		}
+		if exist {
 			fmt.Println("This email has already been used , Try again")
 			continue
-		} else if statusCode == 2 {
+		} else {
 			user.Email = email
 			break
 		}
@@ -60,17 +54,17 @@ func GetRegisterInfo() entity.User {
 	//get password
 	for {
 		fmt.Print("Enter password: ")
-		password1, _ := gopass.GetPasswd()
-		password11 := ModifyPassword(password1)
+		pswByte, _ := gopass.GetPasswd()
+		pswStr := ModifyPassword(pswByte)
 		fmt.Print("Repeat password: ")
-		password2, _ := gopass.GetPasswd()
-		password22 := ModifyPassword(password2)
-		pErr := CheckRePassword(password11, password22)
+		confPswByte, _ := gopass.GetPasswd()
+		confPswStr := ModifyPassword(confPswByte)
+		pErr := CheckRePassword(pswStr, confPswStr)
 		if pErr != nil {
 			fmt.Println("Try again")
 			continue
 		}
-		user.Password = password11
+		user.SetPassword(pswStr)
 		break
 	}
 

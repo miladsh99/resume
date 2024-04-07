@@ -16,23 +16,22 @@ func LoginUser() {
 		fmt.Print("Enter email: ")
 		email, _ := reader.ReadString('\n')
 		email = ModifyValue(email)
-		statusCode := CheckEmail(email, repository.ConnectDatabase())
-		if statusCode == 2 {
-			fmt.Println("Email is not available , Try again")
+		user, gErr := FindUserByEmail(email, repository.ConnectDatabase())
+		if gErr != nil {
+			fmt.Println(gErr)
 			continue
 		}
+
 		fmt.Print("Enter password: ")
 		password, _ := gopass.GetPasswd()
 		password1 := ModifyPassword(password)
-		statusCode = CheckPassword(email, password1, repository.ConnectDatabase())
-		if statusCode == 2 {
-			fmt.Println("Password is wrong")
-			continue
-		} else if statusCode == 1 {
-			fmt.Println("Login successfully")
-			break
-		}
 
+		if user.GetPassword() != password1 {
+			fmt.Println("email or password is not correct")
+			continue
+		}
+		fmt.Println("login successfully")
+		break
 	}
 
 }

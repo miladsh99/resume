@@ -4,39 +4,36 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"resume/entity"
 )
 
-func CheckEmail(e string, db *sql.DB) (statusCode int) {
-
-	rows, wErr := db.Query("SELECT email FROM users")
-	if wErr != nil {
-		fmt.Println(wErr)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var columnValue string
-		if rErr := rows.Scan(&columnValue); rErr != nil {
-			fmt.Println(rErr)
+func CheckEmail(e string, db *sql.DB) (bool, error) {
+	var email string
+	row := db.QueryRow(`SELECT email from users where email=?`, e)
+	sErr := row.Scan(&email)
+	if sErr != nil {
+		err := sql.ErrNoRows
+		if errors.As(sErr, &err) {
+			return false, nil
 		}
-		if columnValue == e {
-			return 1
-		}
+		return false, errors.New("something went wrong")
 	}
-	return 2
+
+	return true, nil
 }
 
-func CheckPassword(email string, password1 string, db *sql.DB) (statusCode int) {
+func CheckPassword(email string, password1 string, db *sql.DB) (bool, error) {
 	var password2 string
-	dErr := db.QueryRow("SELECT password FROM users WHERE email = ?", email).Scan(&password2)
-	if dErr != nil {
-		fmt.Println(dErr)
+	sErr := db.QueryRow("SELECT password FROM users WHERE email = ?", email).Scan(&password2)
+	if sErr != nil {
+		err := sql.ErrNoRows
+		if errors.As(sErr, &err) {
+			return false, nil
+		}
+		return false, errors.New("something went wrong")
 	}
-	if password1 == password2 {
-		return 1
-	} else {
-		return 2
-	}
+
+	return true, nil
 }
 
 func CheckRePassword(p1 string, p2 string) error {
@@ -46,4 +43,22 @@ func CheckRePassword(p1 string, p2 string) error {
 		fmt.Println("The passwords do not match")
 		return errors.New("err")
 	}
+}
+
+func FindUserByEmail(email string, db *sql.DB) (entity.User, error) {
+	row := db.QueryRow(`SELECT * from users where email=?`, email)
+	var user entity.User
+	var password string
+	sErr := row.Scan(&user.ID, &user.Name, &user.Email, &password, &user.CreatedAt, &user.UpdatedAt)
+	if sErr != nil {
+		err := sql.ErrNoRows
+		if errors.As(sErr, &err) {
+			return entity.User{}, errors.New("user not found")
+		}
+		return entity.User{}, errors.New("something went wrong")
+	}
+
+	user.SetPassword(password)
+
+	return user, nil
 }
