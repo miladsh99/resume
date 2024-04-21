@@ -1,37 +1,56 @@
 package service
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
-	"github.com/howeyc/gopass"
-	"os"
+	"golang.org/x/crypto/bcrypt"
+	"io"
+	"net/http"
 	"resume/repository"
 )
 
-func LoginUser() {
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
 
-	reader := bufio.NewReader(os.Stdin)
+func LoginUser(w http.ResponseWriter, r *http.Request) {
 
-	for {
-		fmt.Print("Enter email: ")
-		email, _ := reader.ReadString('\n')
-		email = ModifyValue(email)
-		user, gErr := FindUserByEmail(email, repository.ConnectDatabase())
-		if gErr != nil {
-			fmt.Println(gErr)
-			continue
-		}
+	if r.Method != http.MethodPost {
+		fmt.Fprintf(w, "invalid request method")
+		return
+	}
 
-		fmt.Print("Enter password: ")
-		password, _ := gopass.GetPasswd()
-		password1 := ModifyPassword(password)
+	data, _ := io.ReadAll(r.Body)
+	req := LoginRequest{}
+	json.Unmarshal(data, &req)
 
-		if user.GetPassword() != password1 {
-			fmt.Println("email or password is not correct")
-			continue
-		}
-		fmt.Println("login successfully")
-		break
+	user, lErr := FindUserByEmail(req.Email, repository.ConnectDatabase())
+	if lErr != nil {
+		fmt.Fprintf(w, lErr.Error())
+	}
+
+	pErr := bcrypt.CompareHashAndPassword([]byte(user.GetPassword()), []byte(req.Password))
+	if pErr != nil {
+		fmt.Fprintf(w, "Wrong Password")
+		return
+	} else {
+		res := Token(user)
+		fmt.Fprintf(w, `{ "response" : %+v }`, res)
+		return
 	}
 
 }
+
+//		// ارسال توکن به کاربر
+//		http.SetCookie(w, &http.Cookie{
+//			Name:    "token",
+//			Value:   tokenString,
+//			Expires: expirationTime,
+//		})
+//		http.Redirect(w, r, "/data", http.StatusSeeOther)
+//		return
+//	}
+//
+//	w.WriteHeader(http.StatusUnauthorized)
+//}

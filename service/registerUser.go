@@ -1,73 +1,45 @@
 package service
 
 import (
-	"bufio"
-	"database/sql"
 	"fmt"
-	"github.com/howeyc/gopass"
-	"log"
-	"os"
-	"resume/entity"
+	"net/http"
 	"resume/repository"
 )
 
-func RegisterUser(db *sql.DB, user entity.User) (entity.User, error) {
+func RegisterUser(w http.ResponseWriter, r *http.Request) {
 
-	res, rErr := db.Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-		user.Name, user.Email, user.GetPassword())
-	if rErr != nil {
-		return entity.User{}, rErr
+	if r.Method != http.MethodPost {
+		fmt.Fprintf(w, "invalid request method")
+		return
 	}
-	// insert into db ->
-	id, _ := res.LastInsertId()
-	user.ID = uint(id)
 
-	return user, nil
+	user := ReadRequest(r)
+
+	exist := CheckEmail(user.Email, repository.ConnectDatabase())
+
+	switch exist {
+	case 1:
+		fmt.Fprintf(w, "something went wrong")
+		return
+	case 2:
+		fmt.Fprintf(w, "This email has already been used")
+		return
+	case 3:
+		fmt.Fprintf(w, "your input is not email")
+		return
+	}
+
+	registeredUser, rErr := InsertUserDataInDB(user)
+	if rErr != nil {
+		fmt.Fprintf(w, rErr.Error())
+	}
+
+	res := Token(registeredUser)
+	fmt.Fprintf(w, `{ "response" : %+v }`, res)
 }
 
-func GetRegisterInfo() entity.User {
-	var user entity.User
-	reader := bufio.NewReader(os.Stdin)
-
-	//get name
-	fmt.Print("Enter name: ")
-	name, _ := reader.ReadString('\n')
-	user.Name = ModifyValue(name)
-
-	//get email
-	for {
-		fmt.Print("Enter email: ")
-		email, _ := reader.ReadString('\n')
-		email = ModifyValue(email)
-		exist, err := CheckEmail(email, repository.ConnectDatabase())
-		if err != nil {
-			log.Fatalln(err)
-		}
-		if exist {
-			fmt.Println("This email has already been used , Try again")
-			continue
-		} else {
-			user.Email = email
-			break
-		}
-	}
-
-	//get password
-	for {
-		fmt.Print("Enter password: ")
-		pswByte, _ := gopass.GetPasswd()
-		pswStr := ModifyPassword(pswByte)
-		fmt.Print("Repeat password: ")
-		confPswByte, _ := gopass.GetPasswd()
-		confPswStr := ModifyPassword(confPswByte)
-		pErr := CheckRePassword(pswStr, confPswStr)
-		if pErr != nil {
-			fmt.Println("Try again")
-			continue
-		}
-		user.SetPassword(pswStr)
-		break
-	}
-
-	return user
+type RegisterRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }

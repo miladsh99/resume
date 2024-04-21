@@ -4,22 +4,25 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"resume/entity"
 )
 
-func CheckEmail(e string, db *sql.DB) (bool, error) {
-	var email string
-	row := db.QueryRow(`SELECT email from users where email=?`, e)
-	sErr := row.Scan(&email)
-	if sErr != nil {
-		err := sql.ErrNoRows
-		if errors.As(sErr, &err) {
-			return false, nil
-		}
-		return false, errors.New("something went wrong")
+func CheckEmail(e string, db *sql.DB) (statusCode int) {
+	email, eErr := CheckRegexEmail(e)
+	if eErr != nil {
+		return 3
 	}
-
-	return true, nil
+	var nEmail string
+	cErr := db.QueryRow(`SELECT email from users where email=?`, email).Scan(&nEmail)
+	if cErr != nil {
+		err := sql.ErrNoRows
+		if errors.As(cErr, &err) {
+			return 0
+		}
+		return 1
+	}
+	return 2
 }
 
 func CheckPassword(email string, password1 string, db *sql.DB) (bool, error) {
@@ -32,7 +35,6 @@ func CheckPassword(email string, password1 string, db *sql.DB) (bool, error) {
 		}
 		return false, errors.New("something went wrong")
 	}
-
 	return true, nil
 }
 
@@ -57,8 +59,16 @@ func FindUserByEmail(email string, db *sql.DB) (entity.User, error) {
 		}
 		return entity.User{}, errors.New("something went wrong")
 	}
-
 	user.SetPassword(password)
-
 	return user, nil
+}
+
+func CheckRegexEmail(input string) (string, error) {
+	emailPattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+	re := regexp.MustCompile(emailPattern)
+	if re.MatchString(input) {
+		return input, nil
+	} else {
+		return "", errors.New("input is not a valid email")
+	}
 }
