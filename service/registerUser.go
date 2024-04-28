@@ -4,42 +4,38 @@ import (
 	"fmt"
 	"net/http"
 	"resume/repository"
+	"resume/utills"
 )
 
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
-		fmt.Fprintf(w, "invalid request method")
+		utills.ErrorManagement(w, utills.InvalidMethod)
 		return
 	}
 
-	user := ReadRequest(r)
+	user := ReadRequest(r, w)
 
-	exist := CheckEmail(user.Email, repository.ConnectDatabase())
+	if user.Name == "" {
+		return
+	}
 
-	switch exist {
-	case 1:
-		fmt.Fprintf(w, "something went wrong")
+	invalidEmail := CheckRegexEmail(user.Email, w)
+	if invalidEmail != user.Email {
 		return
-	case 2:
-		fmt.Fprintf(w, "This email has already been used")
-		return
-	case 3:
-		fmt.Fprintf(w, "your input is not email")
+	}
+
+	cErr := CheckEmail(user.Email, repository.ConnectDatabase(), w)
+	if cErr != utills.NotExist {
+		utills.ErrorManagement(w, cErr)
 		return
 	}
 
 	registeredUser, rErr := InsertUserDataInDB(user)
 	if rErr != nil {
-		fmt.Fprintf(w, rErr.Error())
+		utills.ErrorManagement(w, utills.DB)
 	}
 
 	res := Token(registeredUser)
 	fmt.Fprintf(w, `{ "response" : %+v }`, res)
-}
-
-type RegisterRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
 }

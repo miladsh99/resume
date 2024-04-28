@@ -6,33 +6,45 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"io"
 	"net/http"
+	"resume/dto"
+	"resume/entity"
 	"resume/repository"
+	"resume/utills"
 )
-
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
-		fmt.Fprintf(w, "invalid request method")
+		utills.ErrorManagement(w, utills.InvalidMethod)
 		return
 	}
 
-	data, _ := io.ReadAll(r.Body)
-	req := LoginRequest{}
-	json.Unmarshal(data, &req)
+	data, dErr := io.ReadAll(r.Body)
+	if dErr != nil {
+		utills.ErrorManagement(w, utills.Body)
+		return
+	}
 
-	user, lErr := FindUserByEmail(req.Email, repository.ConnectDatabase())
-	if lErr != nil {
-		fmt.Fprintf(w, lErr.Error())
+	req := dto.LoginRequest{}
+	jErr := json.Unmarshal(data, &req)
+	if jErr != nil {
+		utills.ErrorManagement(w, utills.Unmarshal)
+		return
+	}
+
+	invalidEmail := CheckRegexEmail(req.Email, w)
+	if invalidEmail != req.Email {
+		return
+	}
+
+	user := FindUserByEmail(entity.User{Email: req.Email}, repository.ConnectDatabase(), w)
+	if user.ID == 0 {
+		return
 	}
 
 	pErr := bcrypt.CompareHashAndPassword([]byte(user.GetPassword()), []byte(req.Password))
 	if pErr != nil {
-		fmt.Fprintf(w, "Wrong Password")
+		utills.ErrorManagement(w, utills.Pass)
 		return
 	} else {
 		res := Token(user)
@@ -41,16 +53,3 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
-
-//		// ارسال توکن به کاربر
-//		http.SetCookie(w, &http.Cookie{
-//			Name:    "token",
-//			Value:   tokenString,
-//			Expires: expirationTime,
-//		})
-//		http.Redirect(w, r, "/data", http.StatusSeeOther)
-//		return
-//	}
-//
-//	w.WriteHeader(http.StatusUnauthorized)
-//}

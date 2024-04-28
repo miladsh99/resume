@@ -5,53 +5,47 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"io"
 	"net/http"
+	"regexp"
+	"resume/dto"
 	"resume/entity"
-	"resume/repository"
-	"strings"
+	"resume/utills"
 	"time"
 )
 
-func ModifyValue(v string) string {
-	newValue := strings.TrimSpace(strings.ToLower(v))
-	return newValue
-}
-
-func ModifyPassword(p []byte) string {
-	newValue := strings.TrimSpace(string(p))
-	return newValue
-}
-
-func ReadRequest(r *http.Request) entity.User {
-	data, _ := io.ReadAll(r.Body)
-	req := RegisterRequest{}
-	json.Unmarshal(data, &req)
-
+func ReadRequest(r *http.Request, w http.ResponseWriter) entity.User {
+	data, dErr := io.ReadAll(r.Body)
+	if dErr != nil {
+		utills.ErrorManagement(w, utills.Body)
+		return entity.User{}
+	}
+	req := dto.RegisterRequest{}
+	uErr := json.Unmarshal(data, &req)
+	if uErr != nil {
+		utills.ErrorManagement(w, utills.Unmarshal)
+		return entity.User{}
+	}
 	user := entity.User{
 		Name:      req.Name,
 		Email:     req.Email,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}
-
-	pass, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	pass, pErr := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if pErr != nil {
+		utills.ErrorManagement(w, utills.Other)
+		return entity.User{}
+	}
 	user.SetPassword(string(pass))
-
 	return user
 }
 
-func InsertUserDataInDB(user entity.User) (entity.User, error) {
-
-	db := repository.ConnectDatabase()
-	defer db.Close()
-
-	res, rErr := db.Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-		user.Name, user.Email, user.GetPassword())
-	if rErr != nil {
-		return entity.User{}, rErr
+func CheckRegexEmail(input string, w http.ResponseWriter) string {
+	emailPattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+	re := regexp.MustCompile(emailPattern)
+	if re.MatchString(input) {
+		return input
+	} else {
+		utills.ErrorManagement(w, utills.Invalid)
+		return ""
 	}
-	// insert into db ->
-	id, _ := res.LastInsertId()
-	user.ID = uint(id)
-
-	return user, nil
 }

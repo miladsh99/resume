@@ -2,18 +2,14 @@ package service
 
 import (
 	"github.com/golang-jwt/jwt/v5"
+	"resume/dto"
 	"resume/entity"
 	"time"
 )
 
-type TokenResponse struct {
-	Token string `json:"token"`
-	ID    uint   `json:"id"`
-}
-
 var jwtKey = []byte("miladooo")
 
-func Token(user entity.User) TokenResponse {
+func Token(user entity.User) dto.LoginResponse {
 
 	// Create a new token object, specifying signing method and the claims
 	// you would like it to contain.
@@ -26,7 +22,7 @@ func Token(user entity.User) TokenResponse {
 	// Sign and get the complete encoded token as a string using the secret
 	tokenString, _ := token.SignedString(jwtKey)
 
-	res := TokenResponse{
+	res := dto.LoginResponse{
 		Token: tokenString,
 		ID:    user.ID,
 	}
