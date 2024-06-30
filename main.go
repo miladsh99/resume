@@ -8,11 +8,10 @@ import (
 )
 
 func main() {
-
-	http.HandleFunc("/auth/login", service.LoginUser)
 	http.HandleFunc("/auth/register", service.RegisterUser)
+	http.HandleFunc("/auth/login", service.LoginUser)
 
-	err := http.ListenAndServe("localhost:6665", nil)
+	err := http.ListenAndServe("localhost:7775", nil)
 	if err != nil {
 		fmt.Println(err)
 	}

@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"resume/dto"
-	"resume/entity"
 	"resume/repository"
 	"resume/utills"
 )
@@ -15,41 +14,53 @@ import (
 func LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
-		utills.ErrorManagement(w, utills.InvalidMethod)
+		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.InvalidMethod})
 		return
 	}
+
+	//------------------------------------------
+
+	var req = dto.LoginRequest{}
 
 	data, dErr := io.ReadAll(r.Body)
 	if dErr != nil {
-		utills.ErrorManagement(w, utills.Body)
+		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.Body})
 		return
 	}
 
-	req := dto.LoginRequest{}
 	jErr := json.Unmarshal(data, &req)
 	if jErr != nil {
-		utills.ErrorManagement(w, utills.Unmarshal)
+		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.Unmarshal})
 		return
 	}
 
-	invalidEmail := CheckRegexEmail(req.Email, w)
+	//------------------------------------------
+
+	invalidEmail := CheckRegexEmail(req.Email)
 	if invalidEmail != req.Email {
+		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.InvalidEmail})
 		return
 	}
 
-	user := FindUserByEmail(entity.User{Email: req.Email}, repository.ConnectDatabase(), w)
-	if user.ID == 0 {
+	//------------------------------------------
+
+	user, cErr := repository.CheckUserByEmail(req.Email)
+	if cErr.Type != utills.ExistEmail {
+		utills.ErrorManagement(w, cErr)
 		return
 	}
+
+	//------------------------------------------
 
 	pErr := bcrypt.CompareHashAndPassword([]byte(user.GetPassword()), []byte(req.Password))
 	if pErr != nil {
-		utills.ErrorManagement(w, utills.Pass)
-		return
-	} else {
-		res := Token(user)
-		fmt.Fprintf(w, `{ "response" : %+v }`, res)
+		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.Pass})
 		return
 	}
+
+	//------------------------------------------
+
+	res := CreateToken(user)
+	fmt.Fprintf(w, `{ "response" : %+v }`, res)
 
 }

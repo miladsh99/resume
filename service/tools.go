@@ -12,40 +12,41 @@ import (
 	"time"
 )
 
-func ReadRequest(r *http.Request, w http.ResponseWriter) entity.User {
-	data, dErr := io.ReadAll(r.Body)
-	if dErr != nil {
-		utills.ErrorManagement(w, utills.Body)
-		return entity.User{}
+func ReadRegisterRequest(r *http.Request) (*entity.User, *dto.ErrorHandle) {
+
+	var req = dto.RegisterRequest{}
+
+	data, rErr := io.ReadAll(r.Body)
+	if rErr != nil {
+		return nil, &dto.ErrorHandle{Type: utills.Body}
 	}
-	req := dto.RegisterRequest{}
-	uErr := json.Unmarshal(data, &req)
-	if uErr != nil {
-		utills.ErrorManagement(w, utills.Unmarshal)
-		return entity.User{}
+
+	mErr := json.Unmarshal(data, &req)
+	if mErr != nil {
+		return nil, &dto.ErrorHandle{Type: utills.Unmarshal}
 	}
+
 	user := entity.User{
 		Name:      req.Name,
 		Email:     req.Email,
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		CreatedAt: time.Time{}.UTC(),
+		UpdatedAt: time.Time{}.UTC(),
 	}
 	pass, pErr := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if pErr != nil {
-		utills.ErrorManagement(w, utills.Other)
-		return entity.User{}
+		return nil, &dto.ErrorHandle{Type: utills.Other}
 	}
 	user.SetPassword(string(pass))
-	return user
+
+	return &user, nil
 }
 
-func CheckRegexEmail(input string, w http.ResponseWriter) string {
+func CheckRegexEmail(input string) string {
 	emailPattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 	re := regexp.MustCompile(emailPattern)
 	if re.MatchString(input) {
 		return input
 	} else {
-		utills.ErrorManagement(w, utills.Invalid)
 		return ""
 	}
 }

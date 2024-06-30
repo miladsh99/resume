@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"net/http"
+	"resume/dto"
 	"resume/repository"
 	"resume/utills"
 )
@@ -10,32 +11,41 @@ import (
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
-		utills.ErrorManagement(w, utills.InvalidMethod)
+		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.InvalidMethod})
 		return
 	}
 
-	user := ReadRequest(r, w)
+	//------------------------------------------
 
-	if user.Name == "" {
+	user, rErr := ReadRegisterRequest(r)
+	if rErr != nil {
+		utills.ErrorManagement(w, rErr)
 		return
 	}
 
-	invalidEmail := CheckRegexEmail(user.Email, w)
-	if invalidEmail != user.Email {
+	Email := CheckRegexEmail(user.Email)
+	if Email != user.Email {
+		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.InvalidEmail})
 		return
 	}
 
-	cErr := CheckEmail(user.Email, repository.ConnectDatabase(), w)
-	if cErr != utills.NotExist {
+	_, cErr := repository.CheckUserByEmail(user.Email)
+	if cErr.Type != utills.NotExistEmail {
 		utills.ErrorManagement(w, cErr)
 		return
 	}
 
-	registeredUser, rErr := InsertUserDataInDB(user)
-	if rErr != nil {
-		utills.ErrorManagement(w, utills.DB)
+	//------------------------------------------
+
+	registeredUser, iErr := repository.InsertUserDataInDB(user)
+	if iErr != nil {
+		utills.ErrorManagement(w, iErr)
+		return
 	}
 
-	res := Token(registeredUser)
+	//------------------------------------------
+
+	res := CreateToken(registeredUser)
 	fmt.Fprintf(w, `{ "response" : %+v }`, res)
+
 }

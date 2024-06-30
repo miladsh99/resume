@@ -11,12 +11,10 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// GetPassword getter
 func (u *User) GetPassword() string {
 	return u.password
 }
 
-// SetPassword setter
 func (u *User) SetPassword(p string) {
 	u.password = p
 }

@@ -2,13 +2,16 @@ package repository
 
 import (
 	"database/sql"
-	"fmt"
+	"resume/dto"
+	"resume/utills"
 )
 
-func ConnectDatabase() *sql.DB {
+func ConnectDatabase() (*sql.DB, *dto.ErrorHandle) {
+
 	db, cErr := sql.Open("mysql", "root:dalim123@tcp(127.0.0.1:3306)/resume-job?parseTime=true")
 	if cErr != nil {
-		fmt.Println(cErr)
+		return nil, &dto.ErrorHandle{Type: utills.DB}
 	}
-	return db
+
+	return db, nil
 }

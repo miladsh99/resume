@@ -3,36 +3,41 @@ package utills
 import (
 	"fmt"
 	"net/http"
+	"resume/dto"
 )
 
-type ErrorType int
-type ErrorResponse string
+func ErrorManagement(w http.ResponseWriter, err *dto.ErrorHandle) {
 
-func ErrorManagement(w http.ResponseWriter, errorType ErrorType) {
-
-	var err ErrorResponse
-	switch errorType {
-	case Invalid:
-		err = "your input is not email"
-	case Exist:
-		err = "This email has already been used"
-	case NotExist:
-		err = "user not found"
+	switch err.Type {
+	case InvalidEmail:
+		err.Message = "your input is not email"
+	case ExistEmail:
+		err.Message = "This email has already been used"
+	case NotExistEmail:
+		err.Message = "user not found"
 	case DB:
-		err = "something went wrong"
+		err.Message = "something went wrong , Database not found"
 	case InvalidMethod:
-		err = "invalid request method"
+		err.Message = "invalid request method"
 	case Body:
-		err = "The body cannot read"
+		err.Message = "The body cannot read"
 	case Unmarshal:
-		err = "The body cannot Unmarshal"
+		err.Message = "The body cannot Unmarshal"
 	case Pass:
-		err = "Wrong Password"
+		err.Message = "Wrong Password"
 	case Other:
-		err = "something went wrong"
+		err.Message = "something went wrong"
+	case TokenErr:
+		err.Message = "The token was not parsed"
+	case NotReceiveToken:
+		err.Message = "Token information not received"
+	case InvalidToken:
+		err.Message = "The token is invalid"
+	case FailedGetDataFromDB:
+		err.Message = "something went wrong , cannot get data from Database"
 	default:
-		err = "something went wrong"
+		err.Message = "something went wrong"
 	}
 
-	fmt.Fprintf(w, "%v", err)
+	fmt.Fprintf(w, "%v", err.Message)
 }
