@@ -4,7 +4,7 @@ services:
   mysql:
     image: mysql:8.0
     ports:
-      - "3306:3306"
+      - "7775:7775"
     container_name: resume-job
     volumes:
       - dbdata:/var/lib/mysql

@@ -1,66 +1,60 @@
 package service
 
 import (
-	"encoding/json"
+	"database/sql"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
-	"io"
 	"net/http"
-	"resume/dto"
-	"resume/repository"
-	"resume/utills"
+	"project1/dto"
+	"project1/repository"
+	"project1/utills"
 )
 
-func LoginUser(w http.ResponseWriter, r *http.Request) {
+func LoginUser(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-	if r.Method != http.MethodPost {
-		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.InvalidMethod})
-		return
+		if r.Method != http.MethodPost {
+			utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.InvalidMethod})
+			return
+		}
+
+		//------------------------------------------
+
+		user, rErr := utills.ReadRequest(utills.Login, r)
+		if rErr != nil {
+			utills.ErrorManagement(w, rErr)
+			return
+		}
+
+		//------------------------------------------
+
+		invalidEmail := utills.CheckRegexEmail(user.Email)
+		if invalidEmail != user.Email {
+			utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.InvalidEmail})
+			return
+		}
+
+		//------------------------------------------
+
+		exUser, cErr := repository.FindUserByEmail(db, user.Email)
+		if cErr.Type != utills.ExistEmail {
+			utills.ErrorManagement(w, cErr)
+			return
+		}
+
+		//------------------------------------------
+
+		pErr := bcrypt.CompareHashAndPassword([]byte(exUser.GetPassword()), []byte(user.GetPassword()))
+		if pErr != nil {
+			utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.Pass})
+			fmt.Println(pErr)
+			return
+		}
+
+		//------------------------------------------
+
+		res := utills.CreateToken(exUser)
+		fmt.Fprintf(w, `{ "response" : %+v }`, res)
 	}
-
-	//------------------------------------------
-
-	var req = dto.LoginRequest{}
-
-	data, dErr := io.ReadAll(r.Body)
-	if dErr != nil {
-		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.Body})
-		return
-	}
-
-	jErr := json.Unmarshal(data, &req)
-	if jErr != nil {
-		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.Unmarshal})
-		return
-	}
-
-	//------------------------------------------
-
-	invalidEmail := CheckRegexEmail(req.Email)
-	if invalidEmail != req.Email {
-		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.InvalidEmail})
-		return
-	}
-
-	//------------------------------------------
-
-	user, cErr := repository.CheckUserByEmail(req.Email)
-	if cErr.Type != utills.ExistEmail {
-		utills.ErrorManagement(w, cErr)
-		return
-	}
-
-	//------------------------------------------
-
-	pErr := bcrypt.CompareHashAndPassword([]byte(user.GetPassword()), []byte(req.Password))
-	if pErr != nil {
-		utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.Pass})
-		return
-	}
-
-	//------------------------------------------
-
-	res := CreateToken(user)
-	fmt.Fprintf(w, `{ "response" : %+v }`, res)
 
 }

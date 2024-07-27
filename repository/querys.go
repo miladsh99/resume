@@ -3,22 +3,19 @@ package repository
 import (
 	"database/sql"
 	"errors"
-	"resume/dto"
-	"resume/entity"
-	"resume/utills"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
+	"project1/dto"
+	"project1/entity"
+	"project1/utills"
 )
 
-func InsertUserDataInDB(user *entity.User) (*entity.User, *dto.ErrorHandle) {
-
-	db, dErrType := ConnectDatabase()
-	if dErrType != nil {
-		return nil, dErrType
-	}
-	defer db.Close()
+func InsertUserDataInDB(db *sql.DB, user *entity.User) (*entity.User, *dto.ErrorHandle) {
 
 	res, rErr := db.Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
 		user.Name, user.Email, user.GetPassword())
 	if rErr != nil {
+		fmt.Println(rErr)
 		return nil, &dto.ErrorHandle{Type: utills.FailedGetDataFromDB}
 	}
 	id, _ := res.LastInsertId()
@@ -27,19 +24,13 @@ func InsertUserDataInDB(user *entity.User) (*entity.User, *dto.ErrorHandle) {
 	return user, nil
 }
 
-func CheckUserByEmail(e string) (*entity.User, *dto.ErrorHandle) {
+func FindUserByEmail(db *sql.DB, e string) (*entity.User, *dto.ErrorHandle) {
 
 	var user entity.User
 	var password string
 
-	db, dErrType := ConnectDatabase()
-	if dErrType != nil {
-		return nil, dErrType
-	}
-	defer db.Close()
-
 	row := db.QueryRow(`SELECT * from users where email=?`, e)
-	cErr := row.Scan(&user.ID, &user.Name, &user.Email, &password, &user.CreatedAt, &user.UpdatedAt)
+	cErr := row.Scan(&user.ID, &user.Name, &user.Email, &password, &user.CreatedAt, &user.UpdatedAt, &user.UserTypeId)
 	user.SetPassword(password)
 	if cErr != nil {
 		err := sql.ErrNoRows

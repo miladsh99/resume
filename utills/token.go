@@ -1,9 +1,9 @@
-package service
+package utills
 
 import (
 	"github.com/golang-jwt/jwt/v5"
-	"resume/dto"
-	"resume/entity"
+	"project1/dto"
+	"project1/entity"
 	"time"
 )
 

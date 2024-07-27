@@ -1,6 +1,6 @@
 package utills
 
-import "resume/dto"
+import "project1/dto"
 
 const (
 	DB dto.ErrorType = iota + 1

@@ -3,7 +3,7 @@ package utills
 import (
 	"fmt"
 	"net/http"
-	"resume/dto"
+	"project1/dto"
 )
 
 func ErrorManagement(w http.ResponseWriter, err *dto.ErrorHandle) {
