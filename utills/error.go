@@ -1,12 +1,11 @@
 package utills
 
 import (
-	"fmt"
-	"net/http"
+	"github.com/gofiber/fiber/v3"
 	"project1/dto"
 )
 
-func ErrorManagement(w http.ResponseWriter, err *dto.ErrorHandle) {
+func ErrorManagement(c fiber.Ctx, err *dto.ErrorHandle) {
 
 	switch err.Type {
 	case InvalidEmail:
@@ -35,9 +34,12 @@ func ErrorManagement(w http.ResponseWriter, err *dto.ErrorHandle) {
 		err.Message = "The token is invalid"
 	case FailedGetDataFromDB:
 		err.Message = "something went wrong , cannot get data from Database"
+	case ShortPass:
+		err.Message = " Password is Short"
+	case EmptyName:
+		err.Message = "Name is Empty"
 	default:
 		err.Message = "something went wrong"
 	}
-
-	fmt.Fprintf(w, "%v", err.Message)
+	c.SendString(err.Message)
 }

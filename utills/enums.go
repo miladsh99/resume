@@ -16,4 +16,6 @@ const (
 	TokenErr
 	InvalidToken
 	NotReceiveToken
+	ShortPass
+	EmptyName
 )

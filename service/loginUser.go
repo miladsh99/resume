@@ -3,58 +3,53 @@ package service
 import (
 	"database/sql"
 	"fmt"
+	"github.com/gofiber/fiber/v3"
 	"golang.org/x/crypto/bcrypt"
-	"net/http"
 	"project1/dto"
 	"project1/repository"
 	"project1/utills"
 )
 
-func LoginUser(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func LoginUser(db *sql.DB) fiber.Handler {
+	return func(c fiber.Ctx) error {
 
-		if r.Method != http.MethodPost {
-			utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.InvalidMethod})
-			return
-		}
-
-		//------------------------------------------
-
-		user, rErr := utills.ReadRequest(utills.Login, r)
+		user, rErr := utills.ReadRequest(utills.Login, c)
 		if rErr != nil {
-			utills.ErrorManagement(w, rErr)
-			return
+			utills.ErrorManagement(c, rErr)
+			return nil
 		}
 
 		//------------------------------------------
 
 		invalidEmail := utills.CheckRegexEmail(user.Email)
 		if invalidEmail != user.Email {
-			utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.InvalidEmail})
-			return
+			utills.ErrorManagement(c, &dto.ErrorHandle{Type: utills.InvalidEmail})
+			return nil
 		}
 
 		//------------------------------------------
 
 		exUser, cErr := repository.FindUserByEmail(db, user.Email)
 		if cErr.Type != utills.ExistEmail {
-			utills.ErrorManagement(w, cErr)
-			return
+			utills.ErrorManagement(c, cErr)
+			return nil
 		}
 
 		//------------------------------------------
 
 		pErr := bcrypt.CompareHashAndPassword([]byte(exUser.GetPassword()), []byte(user.GetPassword()))
 		if pErr != nil {
-			utills.ErrorManagement(w, &dto.ErrorHandle{Type: utills.Pass})
+			utills.ErrorManagement(c, &dto.ErrorHandle{Type: utills.Pass})
 			fmt.Println(pErr)
-			return
+			return nil
 		}
 
 		//------------------------------------------
 
 		res := utills.CreateToken(exUser)
-		fmt.Fprintf(w, `{ "response" : %+v }`, res)
+		c.JSON(res)
+
+		return nil
 	}
 
 }

@@ -1,44 +1,34 @@
 package utills
 
 import (
-	"encoding/json"
-	"golang.org/x/crypto/bcrypt"
-	"io"
-	"net/http"
+	"github.com/gofiber/fiber/v3"
 	"project1/dto"
 	"project1/entity"
 )
 
-func ReadRequest(ReType RequestType, r *http.Request) (*entity.User, *dto.ErrorHandle) {
-
-	data, rErr := io.ReadAll(r.Body)
-	if rErr != nil {
-		return nil, &dto.ErrorHandle{Type: Body}
-	}
+func ReadRequest(ReType RequestType, c fiber.Ctx) (*entity.User, *dto.ErrorHandle) {
 
 	switch ReType {
 	case Register:
 		var req = dto.RegisterRequest{}
-		mErr := json.Unmarshal(data, &req)
-		if mErr != nil {
+
+		bErr := c.Bind().Body(&req)
+		if bErr != nil {
 			return nil, &dto.ErrorHandle{Type: Unmarshal}
 		}
+
 		user := entity.User{
 			Name:  req.Name,
 			Email: req.Email,
 		}
-		pass, pErr := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-		if pErr != nil {
-			return nil, &dto.ErrorHandle{Type: Other}
-		}
-		user.SetPassword(string(pass))
+		user.SetPassword(req.Password)
 
 		return &user, nil
 
 	case Login:
 		var req = dto.LoginRequest{}
-		mErr := json.Unmarshal(data, &req)
-		if mErr != nil {
+		bErr := c.Bind().Body(&req)
+		if bErr != nil {
 			return nil, &dto.ErrorHandle{Type: Unmarshal}
 		}
 		user := entity.User{
